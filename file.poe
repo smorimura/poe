@@ -1,0 +1,20 @@
+/* file.poe: echoes the contents of a file to the terminal, capitalizing
+   all lowercase characters. The name of the file to be echoed is given as
+   a command line argument: for instance,
+      pint file.poe pmain.c
+   to capitalize and echo the contents of pmain.c. */
+
+f = io.open(argv[0],"r");
+
+a = io.tostr(f);            #! convert the file f to an array of strings
+
+capitalize = func(c):
+      if c>='a' and c<='z':
+          return(c-'a'+'A');
+      end;
+      return(c);
+end;
+
+print(map!(capitalize,a));
+
+io.close(f);

@@ -1,0 +1,2 @@
+all: pdata.c puniverse.c pmem.c pdo1.c pdo2.c pexec.c pbc.c pgc.c lex.yy.c y.tab.c pstd.c pio.c pmath.c pstring.c pmain.c
+	gcc pdata.c puniverse.c pmem.c pdo1.c pdo2.c pexec.c pbc.c pgc.c lex.yy.c y.tab.c pstd.c pio.c pmath.c pstring.c pmain.c -lm -o pint

@@ -1,0 +1,17 @@
+/* echo.poe: a simple Poe implementation of echo, without command line
+   argument implementation */
+
+/* usage: pint echo.poe ... */
+
+/* join: concatenate all the string members of an array with delim interspersed
+   between each */
+join = func(delim, arr):
+     acc = "";
+     for key, str in arr: 
+         string.concat(acc,str,acc);
+	 if key<@arr: string.concat(acc,delim,acc); end;
+     end;
+     return(acc);
+end;
+
+print(join(" ",argv));

@@ -1,0 +1,4 @@
+1) Finish up the standard library; this information is contained in the
+pstd.h and standard_library.txt files.
+2) Implement runtime error messages; currently, the interpreter exits
+silently if it encounters an error, which is far from acceptable.

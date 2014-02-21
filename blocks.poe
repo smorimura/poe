@@ -1,0 +1,119 @@
+/* blocks.poe: a demonstration of Poe blocks */
+
+/* usage: pint blocks.poe */
+
+/* Poe blocks are inspired by Ruby blocks, but they are not identical. In Ruby,
+   blocks are just anonymous functions with a more elegant syntax. Poe offers
+   anonymous functions, so everything that can be done with a Ruby block
+   can be done quite simply with an anonymous function. However, I have not
+   seen a Ruby construct that can do everything Poe blocks can do -- in fact,
+   Poe blocks are very unique.
+
+   Essentially, a Poe block is a block of compiled code that can be invoked
+   anywhere with the do statement. A Poe block is like a function in a lot 
+   of ways, except:
+   1) A block cannot be called or passed arguments.
+   2) A block does not have a parent table.
+   3) A new symbol table is not created when a block is invoked.
+   4) A block cannot return a value, and a block invocation can only be
+      used as an independent statement, not in the middle of an expression.
+
+   The following code will define and execute a block called b. */
+
+b = block:
+    unless local a: a = 0; end;
+    print("hello from block b");
+    a = a+1;
+    print(a);
+end;
+print(b);       #! Notice that the block's type is "code"
+do b;
+
+/* Evidently, invoking the block executed the block's statements; it is as
+   if the block's statements were pasted in place of the block invocation
+   "do b;". Now, a global variable a exists, and it has the value 1. 
+   Now: */
+
+exec_blk = func(blk):
+    do blk;
+end;
+
+exec_blk(b);
+print(a);
+
+/* Notice that even though the block was defined in the global scope, the
+   block does not operate on the global a, instead operating on a variable
+   local to the exec_blk function. The global a is unchanged, until we
+   execute the block in the global scope: */
+
+do b;
+do b;
+
+/* So blocks have dynamic scope; exactly what actions they carry out is
+   dependent on where they are invoked. 
+
+   Further, blocks can be read from files. Calling compile() with a file
+   or string containing Poe source code returns a code object, whose
+   lexical rules are exactly like those that we've observed here.
+
+   This is a fundamental trait of Poe bytecode objects: a string of code will 
+   have different behavior depending on the context. Poe identifiers are never
+   bound to a particular scope; a symbol like "print" might lose its meaning if
+   we move to a context which doesn't have any conception of "print" (see 
+   scope.poe for an example).
+   
+   This approach is unconvential, but interesting: for example, say we want
+   to execute some bytecode from an unknown source. It may be prudent to 
+   "sandbox" this code by executing it in a context which doesn't have
+   access to more sensitive functions, like I/O functions. As an artificial
+   example, say we had a function
+   delete_everything()
+   which automatically deletes everything on disk. Say we had some compiled
+   bytecode which may or may not contain a reference to delete_everything
+   in it. Then we could execute the bytecode with a do instruction from
+   within the local scope of a sandbox, whose access to certain global 
+   variables has been restricted. For example, if we wanted to make
+   a sandbox function where only the print function and string library
+   are accessible, we could do something like this: */
+
+sandbox = func(blk):
+    print = print;
+    string = string;
+    locals.^ = undef;    #! Set the local table's parent to undef
+    do blk;
+end;
+
+/* The sandbox function grabs local copies of print and string (notice that
+   by default, assignment is local, so the assignment "print = print;" is
+   equivalent to "local print = print;"). Now, if blk attempts to access
+   any other global function, delete_everything() or otherwise, the result
+   will be undef. There is no way for the code in blk to access any
+   function but print and the string functions -- as far as blk is 
+   concerned, it is executing within the global scope.
+
+   As a final note, I will discuss how I dealt with the problem of scoping
+   when implementing the standard library functions load and require. Load
+   and require compile and execute bytecode, like so:
+   require("example.poe");
+   However, the result of compiling example.poe is bytecode, and immediately,
+   we run into scoping problems. Keep in mind that require is a function, so
+   all of example.poe's assignments would be operating on require's symbol
+   table rather than the global symbol table; without a workaround, this
+   would make it very difficult to create libraries. As a concrete example, 
+   take the function
+max = func(a,b):
+    if a>b: return(a);
+    else: return(b); end;
+end;
+   Say this were included in example.poe, which is a larger library that
+   we intend to include in many scripts. However, if we simply executed the
+   bytecode in require, max would be defined in *require's local scope*
+   rather than globally, which is where we want it.
+   
+   The key is the standard library function export, which copies the
+   contents of a table into another table. The require problem can be
+   solved by calling export(locals), which exports the contents of the local
+   symbol table into the global table.  So require executes example.poe's 
+   bytecode as normal, and then exports the definitions into the global scope.
+   If you plan to play with Poe's scope, export will probably be a very
+   useful function for you. */

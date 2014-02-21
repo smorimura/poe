@@ -1,0 +1,163 @@
+This is a list of all the currently implemented standard library functions.
+I have not yet implemented all the functions that I would like to, so a
+list of functions that I am planning on including sometime in the future
+follows this list.
+
+*-----IMPLEMENTED FUNCTIONS-----*
+Global functions:
+- compile(...): compiles any arbitrary number of strings containing Poe 
+source code or files which contain Poe source code into executable bytecode
+objects.
+- copy(...): takes any number of string, array, or table objects and produces
+copies of each.
+- eq?(struct1,struct2): returns true if two given structures are equal. The
+structures are considered "equal" if each of their corresponding elements
+are equal.
+- export(src [, dest]): takes one or two tables. If two tables are given, 
+the elements in src are copied to dest. If only one table is given, the
+elements in src are copied into the global table.
+- fold(f, init, iter): Performs a fold operation according to the given 
+function f, initial value init, and iterable structure iter.
+- I(...): returns all the arguments it received, unchanged.
+- load(...): Compiles and *executes* any number of strings containing source
+code or files containing source code, exporting the definitions therein
+to the global table.
+- map(f, iter): maps a function f over a copy of the given iterable (not
+changing any element of the original iterable).
+- map!(f, iter): maps a function f over the given iterable; does modify the
+iterable.
+- print(...): prints any number of objects to the screen, with a space between
+each argument, followed by a newline.
+- range(start [, stop [, step]]): if only one integer value is given, returns
+an array with values from 0 to start-1. If two integer values are given, 
+returns an array with values from start to stop-1 (or start to stop+1 if start>
+stop). If two integer values are given, returns an array with values from 
+start to stop+-1 with step value step.
+- require(...): Compiles and executes the file referenced by any given
+Poe strings if and only if the file has not been required before.
+- size(...): Get the number of elements in any number of iterables.
+- time(): Return the system time as an integer. (Its meaning is system-
+dependent.)
+- tochar(...): converts any number of ints/floats to characters.
+- toint(...): converts any number of chars/floats to integers.
+- tofloat(...): converts any number of chars/ints to floats.
+- tostring(...): converts any number of objects to strings.
+- type(...): returns the types of any number of objects as strings.
+
+String library:
+- string.toarr(s [, arr]): converts a string to an array, converting the
+string's characters to integers. If an array buffer is given, the new array
+is written into that array rather than a new array. 
+- string.fromarr(arr [, s]): converts an array with integer members to a
+string, storing the result in the string buffer it is given.
+- string.cmp(s1, s2): compares two string objects, returning 0 if the strings
+are the same, and some nonzero integer otherwise.
+- string.concat(s1, s2 [, buf]): Concatenates the two given strings, storing
+the result in the buffer if it is given, and in a new string otherwise.
+- string.copy!(dest, src [, n [, max]]): Copy bytes from string src to
+string dest, starting at index n if it is given, and copying max bytes
+at most if it is given.
+- string.find([str [, sub]]): find occurrences of sub in str; results are
+returned as integer indices. After calling the function once with sub and
+str arguments, you can call the function again with no arguments to search
+again for a later occurrence.
+- string.ncmp(s1, s2, n): compare the first n bytes of s1 and s2, returning
+0 if they are the same, and nonzero otherwise.
+- string.slice(s, start, finish [, buf]): copy the bytes start through finish
+of s into the string buffer if it is given, and a new string if not.
+
+Math library:
+math.abs
+math.arccos
+math.arcsin
+math.arctan
+math.ceiling
+math.cos
+math.cosh
+math.deg
+math.ex
+math.floor
+math.fmod
+math.log
+math.log10
+math.pi
+math.pow
+math.rad
+math.rand
+math.srand
+math.sin
+math.sinh
+math.sqrt
+math.tan
+math.tanh
+
+I/O library:
+- io.close(...): close the given files.
+- io.flush(...): flush the given files.
+- io.open(filename, mode): open the given file with name filename under mode
+mode.
+- io.read(n [, file [, str]]): read at most n bytes from the given file (or
+io.stdin if it is not given), storing the bytes in the given buffer (or
+a new string if not given).
+- io.readc([file]): read a character from the given file (or from io.stdin
+if none is given).
+- io.readf([file]): read a floating-point number from the given file
+(or from io.stdin if none is given).
+- io.readl([file [, str]]): read a line from the given file, storing the
+line in the given buffer if one is given. If end-of-file is ever encountered,
+io.readl returns true as a second argument.
+- io.toarr(file): read the entire contents of the given file into an array
+of strings, each string being one line of the file.
+- io.tostr([file [, str]]): read the entire contents of a file into a single
+string, storing the result in the given buffer if one is given.
+- io.write(file, ...): Write argument strings, chars, or ints to given file. 
+(Interprets integers as chars; for example, io.write(io.stdout, 97) prints 'a'.)
+
+*-----TO-BE-IMPLEMENTED FUNCTIONS-----*
+Global functions:
+- run(...): executes any number of file, string, or bytecode objects on a
+NEW Poe universe (not the current one).
+- sandbox(eblk [, fblk[, ...]]): Executes eblk in a new table, which is made to
+look like an "empty" global table; that is, it contains only standard library
+functions. If fblk is given, executes fblk before eblk. fblk can be used to
+"format" the new global table; for example, you can add/delete functions and
+structures from this new global table with the instructions in fblk.
+- setlocs(tab): set the current local table to the given table.
+
+String functions: 
+- string.code(...): converts bytecode objects to modifiable string objects.
+- string.format(...): converts objects to strings according to the given format
+string.
+- string.token([ s, delims ]): Returns the next token in the given string. If
+no arguments are given, look into the string._NEXT table for the relevant info.
+- string.tokarray(s, delims): tokenizes a given string, returning an array of
+strings split by delimiters.
+- string.scan(s, format): Returns an array of values (chars, ints, floats,
+strings) as determined by the format string.
+
+GC functions:
+gc.cycle(): Perform a complete GC cycle.
+gc.majcyc(): Perform a complete GC major cycle.
+gc.majoffset([int]): If an integer argument is given, set the major offset to
+be that integer. If not, return the current major offset.
+gc.start(): Restart the GC if it is stopped.
+gc.step(): Perform a GC step.
+gc.stepfactor([float]): If a float argument is given, set the step factor to
+be that float. If not, return the current step factor.
+gc.stop(): Stop the GC if it is running.
+gc.timer([int]): If an integer argument is given, set the step factor to be
+that timer. If not, return the current timer value.
+
+I/O functions:
+io.withfile(name, mode, blk): Execute the given block with the given file --
+storing that file under the symbol "file" -- and automatically close that file.
+A return vector is given under the symbol R; this can be used to adjust what
+the function will return. You can also "return" from within the function,
+but you will have to manually io.close(file).
+io.tmp(): Return a temporary file; must be closed, and is deleted after being
+closed.
+io.seek(...): Set the file position as per the arguments. 
+io.rewind(...): Rewind input stream.
+io.scan(file, format): Returns an array of values (ints, chars, strings, floats)
+based on the given format string.
+io.remove(str): Remove the given file.

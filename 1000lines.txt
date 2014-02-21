@@ -1,0 +1,972 @@
+POE IN 1000 LINES
+
+This documentation assumes existing background knowledge of at least one
+programming language. In many ways, Poe is like many other languages, so we
+will not dwell on these concepts which have been written about many more times
+in many other books. Instead, we will concentrate on the ways in which Poe
+differs from other languages. This will be a very high-level, quick survey
+of the language in less than 1000 lines, so, evidently, this is not
+comprehensive. However, you should be able to write suitably interesting
+Poe code by this document's end. For further examples, consult the included
+source files.
+
+1. Script invocation
+
+We will begin, as tradition dictates, by composing the program which prints
+"hello world" to the terminal.
+
+print("hello, world");
+
+Save this program as a Poe script with the name hello.poe. The script can be
+invoked with the command
+
+pint hello.poe
+
+To run any code given in this text, it will have to be entered into a script
+and executed with the Poe interpreter pint. Before doing any execution, the
+source code must be compiled into bytecode; the bytecode file that pint
+creates will linger in your working directory (with a ".pbc" extension)
+after pint has exited. You can safely delete it, as calling pint again will
+just re-compile and re-create the bytecode file.
+
+2. Objects
+
+A Poe program is simply a block, and a block is a sequence of
+statements. A statement can be in one of three forms:
+1) An expression, followed by a semicolon;
+2) An assignment, which is a sequence of symbols, the assignment operator =, 
+   and an expression; or
+3) A compound statement, or control flow statement.
+
+An expression is made up of objects and operators. Objects are the "nouns" of
+Poe; anything that can be assigned to symbols and passed to and returned from
+functions is an object. Objects come in twelve types:
+
+int       float      char
+array     table      str
+code      func       file
+bool      null       undef
+
+An *int* is any number without a decimal component. An int may have a
+descriptive prefix or suffix; the 0x prefix specifies the integer is in
+hexadecimal notation, an o suffix specifies octal notation, and a b suffix
+specifies binary notation.
+
+A *float* is any number with a decimal component.
+
+A *char* is a one-byte integer. Printing Poe chars are delimited by single 
+quotes (as in 'c', '?', or ' '). You can also represent non-printing characters
+by an integer encoding followed by a y suffix (e.g. 97y).
+
+A *bool* is one of two values: true or false. However, all Poe objects have
+boolean meaning: false, null, and undef evaluate to false, and all other
+objects evaluate to true.
+
+A *func* can represent both "functions" and "subroutines/procedures", as
+they might be called in other languages. Function definition will be covered 
+in a later section.
+
+*code* objects, or "blocks", can be thought of as lightweight functions. They 
+are unique to the Poe language and are discussed in detail later.
+
+A *file* is simply a C FILE*. A Poe file is a value rather than a structure,
+so no additional overhead is required for Poe files on top of the default C
+structures; however, this means that Poe programmers have to manually close
+their C files, and must be conscious of which files are open and closed.
+
+*null* is a special value for representing the absence of any useful value.
+It is the only object of type null.
+
+*undef* is a special value that represents that a value doesn't exist. It is
+the only object of type undef.
+
+There are three data structures in Poe: arrays, tables, and strings.
+
+Arrays are created with brackets [], which may contain a list of objects for
+initialization:
+
+[ 3, 4, 5 ]
+
+is an array containing the values 3, 4, and 5. Array indices start at 0, so
+if we have the assignment
+
+a = [ 3, 4, 5 ];
+
+then a[0] is 3. You can freely access and assign to elements of arrays with
+the array-subscripting operator []. Any element of any array can be accessed
+at any time; arrays have no maximum size and grow/shrink to suit your 
+assignments.
+
+Strings are created with double quotes:
+
+s = "I am a string";
+
+A number of C-style escape sequences are supported for use in strings, such as
+\n and \t. The operator for accessing elements of strings is also [], but
+there are some restrictions on its use with strings:
+
+- You can only assign characters to strings, rather than arrays whose elements
+  can be of any type.
+- The index of a string assignment can only be as large as the length of a
+  string. As a concrete example, say we have the string "cow", which is 
+  assigned to the symbol c. Then we can carry out the assignment
+     c[0] = 'z';
+  without any problem, but the assignment
+     c[5] = 'a';
+  will bring up an error. This is because the index 5 is greater than the
+  length of the string 3; in other words, we left undefined characters in
+  the middle of the string. By default, if you carry out an assignment
+  that will leave undefined characters in the middle of a string, Poe
+  will halt immediately. Besides this restriction, however, there is
+  no limit to the size of the strings you can build; like with arrays,
+  strings grow and shrink according to your assignments.
+
+Tables are called "hash tables" and "dictionaries" in other languages; they
+map string keys to values, in contrast to arrays which map integer keys to
+values. The table constructor is curly braces:
+   tab = {};
+You can also put a list of assignments within the braces to initialize
+the table:
+   tab = { a = 1, b = 2, c = 3 };
+To key a table with a string, use the table-indexing operator ., as follows:
+   print(tab."a");      => 1
+When the string is a legal symbol name, the quotes can be dropped optionally:
+   print(tab.a);        => 1
+(What constitutes a legal symbol name will be covered in later chapters.)
+Further, you can key a table with a dynamic string key in addition to 
+literal strings. Surround the key with parentheses () to do this; the
+interpreter will first get the value of the expression within, and then
+key the table with the result string.
+    a = "b";
+    print(tab.(a));      => 2
+
+Poe only has these three data structures, and all of them are very important
+to the architecture of the language. A trait all three structures share is
+that a reference to an undefined element of the structure will not raise
+an error, but will instead return the special value undef:
+
+    arr = [ "hello world", "goodbye world", "oh, hi world" ];
+    print(arr[3]);        => undef
+
+If you want to remove an element from a structure, simply give it the value
+undef:
+
+     arr[1] = undef;
+
+3. ASSIGNMENT AND SYMBOLS
+
+We have been performing assignments since the beginning of this text without
+ever actually explaining it; let's go into depth about that now.
+
+Variables in Poe are called "symbols". When you need a new symbol, simply
+assign a value to it. Symbol "declaration" does not exist.
+
+     i = 0.0;
+
+A valid symbol name is any name consisting of letters, numerals, question 
+marks, exclamation points, and underscores that does not start with a number.
+
+      VALID SYMBOL NAMES: 
+      ARatherLongName
+      ___U
+      thisisreallylegal?!
+      var2
+
+The following are keywords, and are therefore not valid symbol names:
+
+and    argc     argv     block
+break  callvc   continue do
+else   end      exit     exitvc
+extern false    for      func
+global globals  if       in
+local  locals   not      null
+or     retc     return   returnvc
+retv   true     undef    unless
+until  while
+
+Any symbol can be preceded by the modifiers local, extern, or global, which
+change the scope of the symbol. (Scope will be discussed heavily in a later
+section.)
+
+Now, here comes the crux of this section: now that we have expounded on what
+a Poe table is, we can say that Poe symbols (variables) are simply stored as
+elements in a regular Poe table. All of the global definitions that one
+makes are stored in a global Poe table, which you can access in your scripts
+through the special keyword "globals". In other words, the assignment
+
+       a = 0.0;
+
+so long as we are in the global scope, is equivalent to
+
+        globals.a = 0.0;
+
+For that reason, it is not erroneous to access a symbol that has not yet been
+defined; accessing an undefined symbol will simply return the value undef.
+We will leave the intricacies of assignment until our discussion of function
+definition, however. It is important to remember for the scope discussion,
+however, that the global table is a table like any other.
+
+4. OPERATORS
+
+An "expression" is either a Poe object, or a combination of operators and
+expressions.  Poe supports the following operators, organized by precedence,
+with the top operators having the highest precedence:
+
+()  []  .   .*  .^
+not  #  - (unary)  @  ~
+*  /  %
+<<  >>
++  - (binary)
+&
+^
+|
+<  <=  >  >=  == ~=
+and
+or
+
+Their roles should be evident to anyone who has programmed before, with a few
+exceptions, which we will cover here:
+
+() 
+  This is the function-calling operator which we have seen so much. In terms
+  of the language's architecture, this operator passes an array of arguments
+  to a function. A difference between Poe and other languages is that non-
+  function objects can be called freely; a non-function object is treated
+  as a constant, so calling, for example, 3() will simply return 3. This
+  is unconventional but allows for extremely concise expression in some
+  cases, as we will see.
+.*
+  This operator gets the metatable of a structure. It is a unary operator
+  placed after the structure, like so:
+     s.*           #! get the metatable of s
+  Metatables are an important concept which will get their own in-depth
+  discussion later.
+.^
+  This operator gets a structure's "superobject". "Superobjects" are
+  very important for scoping in tables. Strings and arrays also have
+  superobjects, but they are not important to the language in any way;
+  rather, a structure's superobject is provided at a convenience to the
+  programmer for any number of uses. Think of the "superobject" as an element
+  of the structure that has the pseudo-index .^ rather than a normal integer
+  or string key.
+#
+  This operator gets the length of a string. For example, #"cow" is 3.
+/
+  In integers, the division operator implements C-like integer division.
+@
+  This operator gets the maximum defined index of an array or string. For
+  example, @[1,2,3] is 2.
+not/~
+  not implements logical negation, while ~ implements bitwise NOT.
+and/&
+  and implements logical intersection, while & implements bitwise AND.
+or/|
+  or implements logical union, while | implements bitwise OR.
+
+All operators are left-associative.
+
+5. STATEMENTS
+
+A statement is either:
+
+1) an expression followed by a semicolon ';',
+2) an assignment, or
+3) a compound statement.
+
+We have looked at 1 and 2, so let us now look at "compound statements", which
+are Poe's control-flow mechanism. Poe offers all the usual constructs for
+looping and conditional execution.
+
+The structure of an "if" statement is:
+
+if EXPR:
+   STATEMENTS
+end;
+
+OR
+
+if EXPR:
+   STATEMENTS
+else:
+   STATEMENTS
+end;
+
+OR
+
+if EXPR:
+   STATEMENTS
+else IF_STATEMENT
+
+These are examples of valid if statements:
+
+if num==3:
+   global message = "num was 3";
+end;
+
+if num==3:
+   global message = "num was 3";
+else:
+   global message = "num wasn't 3";
+end;
+
+if num==3:
+   global message = "num was 3";
+else if num==4:
+   global message = "num was 4";
+else:
+   global message = "num wasn't 3 or 4";
+end;
+
+The "unless" statement is just like the if statement syntactically, but it
+is opposite: it executes its statements when the given expression evaluates
+to false.
+
+The "while" loop is built as follows in Poe:
+
+while EXPR:
+    STATEMENTS
+end;
+
+The "until" loop is opposite the while loop.
+
+The "do-while" loop is built as follows:
+
+do:
+   STATEMENTS
+while EXPR;
+
+As in C, this loop is guaranteed to execute once. The while can also be
+replaced by an until for a "do-until" loop.
+
+The for loop is a more limited version of Python's for loop. The structure
+is as follows:
+
+for SYMBOLNAME, SYMBOLNAME in EXPR:
+    STATEMENTS
+end;
+
+In a for loop, the interpreter loops through each defined element in the given
+structure, assigning the key to the first symbol name and the value associated
+with that key in the second given symbol name. For instance, suppose we
+have a table grades which is defined as follows:
+
+grades = {
+    Martha = 78,
+    Jeffy = 65,
+    Samantha = 92
+};
+
+We can iterate through all the key-value pairs in this table as follows:
+
+for name, grade in grades:
+    print(name,"got a",grade,"in comp sci");
+end;
+
+For loops are the only real way to iterate through tables, though they work
+on strings and arrays as well. Often, however, it is more prudent to use
+the while/until loop for arrays, since for loops come with quite a bit
+of overhead.
+
+6. FUNCTIONS
+
+A function is built in the following way:
+
+func(ARGLIST):
+    STATEMENTS
+end
+
+Specifically, a function is built from the keyword func, a list of symbolnames
+representing the parameters the function takes enclosed by parentheses, a
+colon, a block of statements, and the end keyword to mark the block's end.
+Let us define a simple function as an example.
+
+pythag = func(a,b):
+    return(math.sqrt(a*a+b*b));
+end;
+
+Notice, first of all, the return statement, which is required to return 
+values from functions. The parentheses surrounding the return expression are
+NOT optional. Also notice the semicolon following the function definition, 
+which is not optional. (Strictly speaking, the semicolon is not a part of 
+the function definition, but in fact concludes the statement, which is
+an assignment to the symbol pythag.) Astute high-level programmers will
+recognize pythag as being defined anonymously. All functions in Poe are
+essentially anonymous; functions can, without limitation, be declared
+inline. Further, Poe endorses equal rights for functions.
+Functions, like any other objects, can be assigned to symbols freely and
+passed to and returned from functions.
+
+Now begins our first real discussion of scope as a prominent feature of the
+language. Recall that global variables are defined in the global symbol table.
+Now, when you call a function, that function gets its own local symbol table
+for it to store its local value. In the same way that the keyword globals
+gets you the global symbol table, the keyword locals fetches the most local
+symbol table. (When we're not inside of a function, it is true that locals==
+globals.)
+
+Immediately, we run into a problem with assignment. There is no such thing
+as symbol declaration, so how do we work with multiple symbols within a 
+function definition? The answer lies with the extern, local, and global
+keywords mentioned earlier.
+
+When accessing a symbol, the interpreter will start looking for the symbol
+in the local table. If it fails, it will look to the supertable of the
+local table, and so on and so forth until it either finds the symbol or
+reaches the global table without finding the symbol. It is only after
+failing to find the symbol defined in any table that it will return undef.
+You can change this default behavior by specifying local, which specifies
+that the interpreter should look only in the local table for the symbol;
+global, which specifies that the interpreter should look only in the global
+table for the symbol; and extern, which specifies the interpreter should look
+everywhere but the local symbol table for the symbol. For example:
+
+a = 100;
+f = func():
+   a = 200;
+   print(a);          => 200
+   print(local a);    => 200
+   print(extern a);   => 100
+   g = func():
+      a = 300;
+      print(local a);  => 300
+      print(extern a); => 200
+      print(global a); => 100
+   end;
+end;
+f();
+
+Assignments work somewhat differently. By default, *all assignment is always
+local*. In order to make an assignment anything but local, you will have to
+explicitly specify where you would like the assignment to occur by adding
+extern or global. The global keyword specifies the assignment is to take
+place in the global table, while the extern table searches the supertables of
+the local table for a place where the symbol is defined, and then re-defines it
+in whatever table it is found in. For instance:
+
+a = 100;
+f = func():
+   a = 1;  
+   global a = 200;
+   g = func():
+      extern a = 2;
+   end;
+   g();
+   print(local a);
+end;
+f();
+print(a);     => 200
+
+In the case of the g function, the assignment "extern a = 2" will cause the
+interpreter to search the parent tables for a, then re-define the symbol
+wherever it is found. In this case, f's local symbol table has an a symbol,
+so it is redefined there. Doing an extern assignment will result in an error
+if the symbol is not found in any context, however.
+
+Further, a note about function parameters: in Poe, any function can be called
+with any number of arguments. (Since any object can be called, any Poe object
+can therefore be called with any number of arguments.) If the following
+is the header of your function:
+
+sqrt = func(x):
+   ...
+
+then there is no guarantee on the interpreter's part that sqrt will not
+be passed less than or more than one argument. Any parameters you specify
+that are not given values in the call will be set to undef, and any extra
+arguments will be thrown away. In particular, take the following example:
+
+print3things = func(a,b,c):
+    print(a,b,c);
+end;
+
+print3things(1,2,3);   => 1 2 3
+print3things(1,2);     => 1 2 undef
+print3things(1);       => 1 undef undef
+print3things(1,2,3,4); => 1 2 3
+
+So if you call a function with fewer arguments than are needed, you will
+only know when an error comes up at runtime. This behavior is useful, however,
+to easily implement optional/default arguments. Take the following counter 
+system. A call to inc() increments the global counter by the value of the
+input argument, or, if no argument is given, by 1:
+
+counter = 0;
+inc = func(n):
+   unless local n:  #! undef acts like false, so this is "if n isn't defined":
+       n = 1;
+   end;
+   extern counter = counter + n;
+end;
+
+Finally, we can touch on multiple assignment now that we know the syntax
+of the return() statement. In Poe, functions can return any number of 
+arguments, in the same way that we can be passed any number of arguments.
+To catch all the return values of a function, use multiple assignment,
+which requires a list of lvalues in the assignment:
+
+sum_and_diff = func(x,y):
+   return(x+y,x-y);
+end;
+sum, diff = sum_and_diff(1,10);
+print(sum,diff); =>> 11 -9
+
+As with function calls, if there are more assignments than return values, the
+extra symbols get undef, while extra return values that are not caught by
+the multiple assignment are thrown away.
+
+sum = 0; diff = 0; x = 0;
+sum = sum_and_diff(1,2);
+print(sum,diff); => 3 0
+sum, diff, x = sum_and_diff(10,11);
+print(sum,diff,x); => 21 -1 undef
+
+However, if you use a function call as part of a larger expression, all return
+values but the first are ignored. For example:
+
+print(sum_and_diff(1,2)); => 3
+
+7. ARGUMENTS AND RETURN VALUES
+
+All the functions we have written so far consume and return a definite,
+predetermined number of arguments. Let us now learn to write functions
+which can process and return arbitrarily long lists of arguments. The key is
+in the special keywords argv, argc, retv, and retc. These are special symbols
+with special values; you cannot perform assignments to these symbols.
+
+Whenever a function is called, the argument list is stored in an array, and
+the array of arguments, as well as the number of arguments sent, are sent
+to the called function; these are stored as argv and argc respectively, and
+they can be accessed at any time in any function. As an example, let us 
+implement a function called mapargs, which consumes an arbitrary number 
+of arguments, maps the given function (argument no. 1) over all of the 
+arguments, and prints each argument.
+
+mapargs = func(f):
+    i = 1;
+    while i<argc:
+    	print(f(argv[i]));
+        i = i+1;
+    end;
+end;
+
+Notice that we start at index 1 since index 0 contains the mapping function
+f. (In the global context, argv and argc have a special meaning: they contain
+the command-line arguments.) 
+
+Now, consider this: say we have an array a, and we want to print all the
+elements in a. This could be accomplished by a for loop:
+
+for _, val in a:
+    print(val);
+end;
+
+...but for loops require overhead, and doing an independent function call for
+each value  seems rather wasteful. Function calls are expensive in most
+languages anyway, and they are particularly expensive in Poe considering that
+*each function call requires building a new argv*. So here's an interesting
+paradox: we're ripping elements from an array, putting each element into 
+a one-element array (the argv arrays for the function calls), and sending
+them into print. As long as print is getting its values from an array anyway,
+why not just designate a as the argv to send to print?
+
+The callvc keyword does exactly this. callvc() is a special pseudo-function
+which calls a function with a given argv and argc value. This is to say that
+
+print(a,b,c);
+
+is exactly equivalent to
+
+callvc(print,[a,b,c],3);
+
+So, in the case of the arbitrarily large array a above, we can solve the
+printing problem quickly and efficiently with
+
+callvc(print,a,@a+1);
+
+(This is assuming, of course, that a's elements are contiguously packed
+at the beginning of the array. This method will fail if there are undefined
+elements in the middle of the array; in this case, the for loop is the best
+option, as it skips over undefined elements.)
+
+So now we have argv and argc, and we know how to call functions with callvc
+by sending them argv and argc values. Poe has a symmetrical system in place
+for return values: the return values of a function are packed into an array,
+and that array (along with the number of values returned) can be accessed by
+the calling function as retv and retc. At any point in time in a script, retv
+and retc contain the return values and number of return values of the most
+recently exited function call. The special pseudo-function returnvc returns
+a given array and integer as the return array retv and return count retc; in
+other words, the statement
+
+return(a,b,c);
+
+is exactly equivalent to
+
+returnvc([a,b,c],3);
+
+So, generally, if you want to return an arbitrary number of values, you will
+have to do it with returnvc, at which point the calling function will have
+to analyze retv/retc to take advantage of all the returned values. A knowledge
+of argv, argc, callvc, retv, retc, and returnvc are all required for making
+functions that work on arbitrary lists of arguments and return arbitrary lists
+of values, which is a great convenience. I call a function "generalized" if it
+would normally consume and return exactly one value, but it is implemented
+in such a way that it can consume any number of values. For instance, many of
+the math standard library functions which would ordinarily only take one 
+argument (sin, cosh, sqrt, etc.) are implemented in Poe in a way that allows
+them to take any number of arguments, meaning that, for instance, the following
+statement:
+
+a, b, c = sin(a,b,c);
+
+is equivalent to the block
+
+a = sin(a);
+b = sin(b);
+c = sin(c);
+
+Since Poe's mechanism for function-calling is particularly data structure-
+heavy when compared to those of other languages, this "generalization" is
+very heavily recommended as a way to increase efficiency.
+
+8. METATABLES
+
+Metatables are special tables which regulate the behavior of operators on
+data structures. Any data structure (that is, table, array, or string) can 
+have a metatable. Conceptually, Poe's metatables are borrowed from Lua,
+so if you have used Lua metatables, then you will feel right home here.
+
+The .* operator can be used to access or assign a data structure's metatable.
+The following would key the table t's metatable with the string "key":
+
+print(t.*.key);
+
+And you can set t's metatable as such:
+
+t.* = {};
+
+In broad, general terms, metatables work like this: if you try to carry out
+an operation on a data structure, and the structure's metatable contains
+an element which matches with that operation, the interpreter will call that
+function rather than resorting to whatever the default behavior would be
+in that scenario. For example, the addition operator is not defined for arrays.
+If you try to add two arrays, you will generally get an error. You can change
+that behavior, however, with metatables.
+
+arrmeta = {
+   add = func(a1,a2):
+     ret = [];
+     for key, val in a1:
+        ret[key] = val + a2[key];
+     end;
+     return(ret);
+    end
+};
+
+a1 = [1, 2, 3];
+a2 = [2, 4, 6];
+
+a1.* = arrmeta;
+a2.* = arrmeta;
+
+print(a1+a2);
+
+We have now defined component-wise array addition, and now we can freely use
+the addition operator on any array that has this metatable. This usage is 
+similar to the operator-overloading of object-oriented programming languages,
+but it is more customizable and sustainable.
+
+The following metamethods exist:
+
+add
+sub
+mult
+div
+mod
+unm         (unary minus)
+strlen      (#)
+arrmax      (@)
+metaacc     (.*)
+metaset     (.*)
+superacc    (.^)
+superset    (.^)
+tabacc      (.)
+arracc      ([])
+tabset      (.)
+arrset      ([])
+call        (())
+band        (&)
+bor         (|)
+bxor        (^)
+bnot        (!)
+
+These functions are called, generally, when an operator is attempted on
+a data structure. The relevant arguments are then passed to the function
+in a standardized way; experiment with these functions to see which values
+are passed if you carry out certain operations on objects with metatables.
+(arracc and tabacc deserve some special consideration: these functions are
+only called when an element access would otherwise return an undefined value.
+For example, if an array a has no elements, but a.*.arracc exists, that
+metamethod will be called instead.)
+
+Further, there are the relational metamethods
+
+eq           (==)
+lt           (<)
+le           (<=)
+
+These differ from the other binary metamethods in that both objects
+must have the same metamethod in order for the metamethod to be called;
+in the case of add, sub, mult, and the like, only one of the tables needs
+to have a defined metamethod in order for that metamethod to be called.
+In the case of relational operators, the metamethods for both objects
+must be identical.
+
+Finally, we have the tostr metamethod, which is called whenever the 
+standard library function tostring is called on a data structure, 
+the type metamethod, which is called whenever the type standard library
+function is called, and the onfor metamethod, which is called whenever
+a for loop is built around a structure with that metamethod deined.
+
+Clearly, our discussion here has been somewhat vague, since this document
+aims only to be a quick introduction to the language. Metamethods
+will be fleshed out further in forthcoming documentation.
+
+9. SCOPE
+
+The purpose of "scope" in Poe is to form a meaningful connection between
+"symbols" -- these identifiers that are essentially syntactic sugar for more
+complex expressions, in order to give the appearance of "variables" as in other
+languages -- and the underlying architecture of the language's approach to
+data storage, which is based on hash tables. We have discussed before that
+the assignment
+
+global a = 0
+
+is essentially just syntactic sugar for the more accurate assignment
+
+globals."a" = 0
+
+Further, when we try to access the symbol a, we search the local table and the
+string of parent tables of our local table for a until we find it. In Poe, this
+process looks like
+
+get_symbol = func(symbol, table):
+    if table==undef: return(undef); end;
+    test = table.(symbol);
+    if test~=undef:
+        return(test);
+    else if table.^~=undef:
+        return(get_symbol(symbol,table.^));
+    else: return(undef); end;
+end;
+
+(Recall that the expression "table.^" can be read in English as "the supertable
+of table" or "the parent table of table".) Then, a symbol access to the symbol
+t in the following form:
+
+print(t);
+
+Is, in reality, modeled by
+
+print(get_symbol("t",locals));
+
+We can add the qualifiers local, global, extern to t to modulate where we look
+for the symbol.
+
+EXPRESSION WITH SYMBOL t      EXPRESSION WITHOUT SYMBOL t
+print(t);                     print(get_symbol("t",locals));
+print(local t);               print(locals."t");
+print(extern t);              print(get_symbol("t",locals.^));
+print(global t);              print(globals."t");
+
+(Keep in mind that, in this case, we are using both print and get_symbol
+as symbols. To complete eliminate the use of symbols in an expression like
+"print(extern t);", we'd need to do
+
+globals.get_symbol("print",locals)(globals.get_symbol("t",locals.^));
+
+assuming that get_symbol is defined globally. Obviously we can see how symbols
+are useful -- without symbols, we would need to do all of our named data
+accesses with some combination of locals, globals, the supertable operator .^,
+and string keys.)
+
+So Poe's scoping rules are rather simple in that they are built around tables,
+which are builtin data structures, and that you can directly access and edit
+the local table (with locals), the global table (with globals), and any table
+in between (with locals and some number of supertable accesses .^). These
+traits are not unique to Poe, however -- in fact, they are somewhat common
+among scripting languages.
+
+More unique to this language are that these tables can be directly edited
+at the script level to fundamentally change the language's default behavior
+where symbol accesses are concerned.
+
+When you define a function, that function will be assigned a parent table.
+A function's parent table is whatever table was the local table at the time
+of the function's definition. So, when you define a function while in the
+global context, the global table will be that function's parent table, and
+so on. A note: a function's parent table is determined by which table was
+the local symbol table at the time of definition, not which table the function
+is being saved into. So, in this case:
+
+f = func():
+   local a = 10;
+   global g = func():
+       return(a);
+   end;
+end;
+f();
+
+Though g is being defined globally, it is still in f's context when it is 
+being defined, so g's parent table will be f's local table. g will therefore
+be able to access the local variable a, as expected. (This is an example of a
+closure.) You can access the parent table of a function with the supertable 
+operator .^ .
+
+Now, when a function is called, a new local table is created, and that local
+table's supertable will be set to the called function's parent table. For
+example, if we have the function f defined as above, then the function call
+
+f();
+
+will create a new local table, assign that new local table's supertable to
+f's parent table (which happens to be the global table), and start executing
+f's instructions. Therefore, while in f, if we access the local table's 
+supertable, it will be equal to the global table:
+
+print(locals.^ == globals);  => true
+
+Similarly, we will find in g that the local table's parent table is f's local
+table, and that g's local table's parent table's parent table is the global
+table.
+
+Now, the big reveal: you know that you can access the parent table of a 
+function with .^. You can also *change* a function's parent table manually.
+If we do this:
+
+f = func():
+   local a = 10;
+   global g = func():
+       return(a);
+   g.^ = globals;
+   end;
+end;
+f();
+
+...then we will find that g cannot find the symbol a, since it has lost
+its link to f's local table. Further, you can change the parent table of
+the local or global symbol table to modify scoping. Further exmaples of this
+technique and its applications are found in the scope.poe example script.
+
+10. BLOCKS/CODE
+
+Most of Poe's basic data types -- integers, functions, arrays, and the like --
+will ultimately be familiar to most programmers, except for one: the "code"
+object. Essentially, a Poe code object is just an array of bytes that
+are interpreted as Poe bytecode. All Poe scripts compile to bytecode
+before being run, and a "code" object is simply a string of bytecode that
+has been loaded into memory and can be executed. Code is a lot like Poe
+functions in this way; functions contain bytecode strings as well. It would
+not be fallacious to think of code as "lightweight" functions; code execution
+comes with less overhead, but is also more limited than function calls.
+The primary differences between functions and code are here:
+
+1) Code invocation does not come with a local symbol table. All code is
+executed in the current local context.
+2) You cannot pass arguments to, or return values from, a Poe code block.
+3) Code does not have parent tables.
+4) Code invocation can only be done as an independent statement, never as
+part of a larger expression.
+
+The compile standard library function compiles an input file or a string
+containing source code into a bytecode object and returns it. For example:
+
+file = io.open("in.poe", "r");
+code = compile(file);
+io.close(file);
+print(code)    => code@<x>
+
+At this point, you can execute the code block with the do instruction.
+
+do code;
+
+This will execute all the instructions contained in the input file in.poe
+in whatever context the code was invoked. In other words, the following 
+sequence of instructions:
+
+file = io.open("in.poe", "r");
+code = compile(file);
+io.close(file);
+do code;
+
+...acts exactly as if whatever code in in.poe were directly copied and pasted
+into this part of this script. Take the following simple example:
+
+/* MIN.POE */
+min = func(a,b):
+    if a<b: return(a); end;
+    else: return(b); end;
+end;
+/* END MIN.POE */
+
+/* ONE.POE */
+f = io.open("min.poe", "r")
+c = compile(f);
+io.close(f);
+do c;
+/* END ONE.POE */
+
+Executing the one.poe script will first open the min.poe file, compile it 
+into a code object, close the file, and then execute the code in the global
+context. This will have the effect of defining the function "min" globally.
+(Obviously, this is something of a complex process to do every time you want
+to include a file; the standard library function require does all of this for
+you, e.g. require("min.poe"); )
+
+So compile can be used to compile source code from files; it can also be used
+to compile source code from strings, as in
+
+do compile("print(\"hello world\");");
+
+You can also make "anonymous" code blocks that do not need to be compiled with
+the block keyword. The following code:
+
+do compile("print(\"hello world\");");
+
+is precisely equivalent to
+
+do block: print("hello world"); end;
+
+except that the latter is more efficient, as the block print("hello world");
+is compiled along with the rest of the source code, and does not need to be
+compiled in a second step.
+
+Now, we have said that blocks do not have local tables or parent tables. This
+means that whatever instructions you execute in the block are executed
+exactly as if they are copied and pasted into the spot of the block invocation.
+As a specific example, say we have the following block b:
+
+b = block:
+    a = 100;
+end;
+
+b now sets a to be 100 wherever it is invoked. Now, if we do:
+
+do b;
+print(a);
+
+100 will be printed, as expected. Now: 
+
+g = func():
+    do b;
+    print(a);
+end;
+g();
+print(a);
+
+Notice that 100 is printed once, and then undef is printed. The key here
+is to remember that assignment is, by default, *local*, so a is defined
+locally in whatever context the block b is invoked. Further examples, with
+a more in-depth discussion of the implications of this behavior on the
+language, are provided in the heavily-commented example script blocks.poe.

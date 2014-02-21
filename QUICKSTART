@@ -1,0 +1,29 @@
+To quickly get started with Poe, simply perform a "make", and then call the
+executable pint with the name of one of the example scripts. The given
+example scripts are:
+
+sum.poe: Sums all integers passed to the script as command line options.
+    try: pint sum.poe 3 4 5
+echo.poe: A simple implementation of the echo command line tool.
+    try: pint echo.poe hello world
+file.poe: Consumes a filename as a command line argument and echoes the 
+          contents of that file, capitalized.
+    try: pint file.poe pmain.c
+
+The following files are less useful as command line tools, but are more
+interesting to read in terms of the features of the language.
+
+require.poe: Loads a package for "smart arrays" from smart.poe and does some
+          operations with it. See smart.poe for the implementation.
+    try: pint require.poe
+scope.poe: Quickly presents some of the more interesting quirks of Poe's
+          approach to lexical scoping. To understand the program's output,
+          make sure to follow along with the source code, which is heavily
+          commented.
+    try: pint scope.poe
+blocks.poe: This script is low on code but heavy on comments; it is a
+          discussion of Poe's blocks and code objects.
+std.poe: The Poe implementation of a number of the standard library's functions
+         are given here. The compiled bytecode is built-in to the Poe
+         interpreter, so it would be redundant to execute this as a script;
+         nevertheless, it may be interesting to browse the source code.

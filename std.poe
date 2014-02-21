@@ -1,0 +1,278 @@
+export = func(src,dest):
+       if argc<1:
+       	  print("export: missing first argument");
+          return();
+       end;
+       unless dest:
+       	  dest = globals;
+       end;
+       unless string.cmp(type(src),"table")==0:
+	  return();
+       end;
+       unless string.cmp(type(dest),"table")==0:
+	  return();
+       end;
+       for key, val in src:
+	   dest.(key) = val;
+       end;
+       return();
+end;
+
+eq? = func(a,b):
+    t = type(a);
+    unless string.cmp(t,type(b))==0:
+    	   return(false);
+    end;
+    if string.cmp(t,"table")==0:
+       for key, val in a:
+       	   if b.(key) ~= val:
+	      return(false);
+	   end;
+       end;
+       for key, val in b:
+       	   if a.(key) ~= val:
+	      return(false);
+	   end;
+       end;
+       return(true);
+    end;
+    if string.cmp(t,"array")==0:
+       for key, val in a:
+       	   if b[key] ~= val:
+	      return(false);
+	   end;
+	end;
+	for key, val in b:
+	   if a[key] ~= val:
+	      return(false);
+           end;
+        end;
+        return(true);
+    end;
+    if string.cmp(t,"str")==0:
+       if string.cmp(a,b)==0:
+            return(true);
+       else:
+            return(false);
+       end;
+    end;
+    if a==b:
+       return(true);
+    else:
+       return(false);
+    end;
+end;
+
+copy = func(struct):
+     t = type(struct);
+     if eq?(t,"table"):
+     	ret = {};
+	for key, val in struct:
+	    ret.(key) = val;
+	end;
+	return(ret);
+      end;
+      if eq?(t,"array"):
+      	 ret = [];
+	 for key, val in struct:
+	     ret[key] = val;
+	 end;
+	 return(ret);
+      end;
+      if eq?(t,"str"):
+      	 ret = "";
+	 for key, val in struct:
+	     ret[key] = val;
+	 end;
+	 return(ret); 
+      end;
+      return(struct);
+end;
+
+map! = func(f,struct):
+    t = type(struct);
+    if eq?(t,"array"):
+       for key, val in copy(struct):
+       	   struct[key] = f(val);
+       end;
+       return(struct);
+    end;
+    if eq?(t,"str"):
+       i = 0;
+       len = #struct;
+       while i<len:
+           struct[i] = f(struct[i]);
+           i = i+1;
+       end;
+       return(struct);
+    end;
+    if eq?(t,"table"):
+       for key, val in copy(struct):
+       	   struct.(key) = f(val);
+       end;
+       return(struct);
+    end;
+    return(struct);
+end;
+
+map = func(f,struct):
+    return (map!(f,copy(struct)));
+end;
+
+fold = func(f,init,iter):
+     for _, val in iter:
+     	 init = f(init,val);
+     end;
+     return(init);
+end;
+
+range = func(begin,finish,step):
+      unless begin:
+      	     return(null);
+      end;
+      unless step:
+      	     step = 1;
+      end;
+      unless finish:
+      	     finish = begin;
+	     begin = 0;
+      end;
+      if step==0:
+      	 return(null);
+      end;
+      ret = [];
+      if step<0:
+      	 if finish>=begin: return(null); end;
+	 while begin>finish:
+	       ret[@ret+1] = begin;
+	       begin = begin + step;
+	 end;
+	 return(ret); 
+      else if step>0:
+      	 if finish<=begin: return(null); end;
+	 while begin<finish:
+	       ret[@ret+1] = begin;
+	       begin = begin + step;
+	 end;
+	 return(ret);
+       end;
+end; 
+
+io.toarr = func(f):
+     result = [];
+     until retv(io.readl(f))[1]:
+	   result[@result+1] = retv[0];
+     end;
+     result[@result+1] = retv[0];
+     return(result);
+end;
+
+string.toarr = func(s, arr):
+     unless arr:
+     	arr = [];
+     end;
+     for key, val in s:
+     	arr[key] = toint(val);
+     end;
+     return(arr);
+end;
+
+string.fromarr = func(arr, s):
+     unless s:
+     	  s = "";
+     end;
+     for key, val in arr:
+     	 s[key] = tochar(val);
+     end;
+     return(s);
+end;
+
+string.copy! = func(dest, src, n, max):
+     unless n:
+     	    n = 0;
+     end;
+     unless max:
+     	    max = #src;
+     end;
+     i = 0;
+     while i<max:
+     	   dest[n+i] = src[i];
+	   i = i+1;
+     end;
+     return(dest);
+end;
+
+string.concat = func(s1, s2, buf):
+     unless buf:
+     	    buf = "";
+     end;
+     string.copy!(buf,s1);
+     string.copy!(buf,s2,#buf);
+     return(buf);
+end;
+
+string.slice = func(s, start, finish, buf):
+     unless finish:
+     	    finish = start;
+	    start = 0;
+     end;
+     unless buf:
+      	    buf = "";
+     end;
+     i = 0;
+     while start<finish:
+     	   buf[i] = s[start];
+     	   start = start+1;
+	   i = i+1;
+     end;
+     return(buf);
+end;
+
+string.found = {};
+
+string.find = func(str, sub):
+     unless str:
+     	    str = string.found.str;
+	    sub = string.found.sub;
+	    start = string.found.start;
+     else:
+            string.found.str = str;
+	    string.found.sub = sub;
+	    start = 0;
+     end;
+     len = #sub;
+     buf = "";
+     stop = #str-len+1;
+     while start<stop:
+     	    if string.ncmp(string.slice(str,start,start+len,buf),sub,len)==0:
+	       string.found.start = start+1;
+	       return(start,start+len);
+	    end;
+	    start = start+1;
+     end;
+     string.found.start = start;
+     return(null);
+end;
+
+load = func():
+     for _, _VAL in retv(callvc(compile,argv,argc)):
+     	 do _VAL;
+	 export(locals);
+     end;
+end;
+
+_REQUIRED = {};
+
+require = func():
+      for key, val in argv:
+      	  if _REQUIRED.(val):
+	     continue;
+	  else:
+	     _REQUIRED.(val) = true;
+	     f = io.open(val,"r");
+	     if not f: print("require: file",val,"not found"); exit(1); end;
+	     load(f);
+	     io.close(f);
+          end;
+       end;
+end;

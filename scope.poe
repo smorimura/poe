@@ -1,0 +1,182 @@
+/* scope.poe: a demonstration of Poe's lexical scoping rules
+
+usage: pint scope.poe
+ 
+Poe utilizes an interesting approach to lexical scoping. The rules are as
+follows:
+1) Every function has a "parent table". By default, a function's parent table
+   is the local table where the function was created.
+2) When a function is called, a new local symbol table is created, and its
+   supertable is set to be the function's parent table.
+3) When searching for a symbol, the search starts in the local table. If the
+   interpreter cannot find the symbol there, it moves to the local table's
+   parent table, and so on until it reaches a table without a parent table
+   (the global table). If the identifier is not in that table, undef is
+   returned.
+
+These rules mean that a symbol's value is contingent on the local table and
+the string of parent tables stemming from the local table. This means that we
+can take interesting creative license with the scoping of our variables. */
+
+counter = func(a):
+    count = func(b):
+        extern a = a+b;
+        print(a);
+    end;
+    print("initializing counter to",a);
+    return(count);
+end;
+
+/* What we have in counter is a standard closure, though Poe's approach
+to lexical scoping makes the implementation of closures rather trivial.
+The local function count retains a reference to counter's local symbol table,
+as counter's local symbol table is count's parent table, so the table --
+including the variable a -- lives on with it. */
+
+c1 = counter(1);
+c2 = counter(1);
+c1(1);
+c1(1);
+c2(1);
+c1(3);
+
+/* c1 and c2 are two functions with different parent tables, so they have
+different copies of a to refer to. Now, you can access a function's 
+parent table with the .^ operator, so let's delete a parent table of 
+one of these functions:*/
+
+c1.^.^ = undef;
+
+/* Here, we are undefining the parent table of the parent table of c1
+   (that is, we are removing c1's reference to the global table).
+   Now let's see what happens when we call it: */
+
+print("about to call c1");
+c1(3);
+print("just called c1");
+
+/* There was no output to the screen, although c1 prints the value of a as a
+   side effect. This is because we removed the reference to print from c1's
+   lexical scope, so "print" is undefined for c1. a still exists for c1,
+   however: */
+
+print(c1.^.a);
+
+/* Now, c1 calls print, but print doesn't exist for c1. Let's fix that by
+   giving it a reference to a new parent table: */
+
+c1.^.^ = { print = func(): print("Bah, humbug!"); end };
+
+/* Ready? */
+
+c1(1);
+c1(1);
+c1(1);
+
+/* So, c1 calls print, but the global print does not exist within its reference
+   tree. Instead, it calls this new function which we've just written, which
+   prints "Bah, humbug" to the screen no matter what the value of its
+   arguments was. (Notice that this new print function can reference the 
+   global print function, since it has global scope.)
+   
+   Remember that c1.^.^ used to be the global table, so let's
+   take c1 out of its misery and bring things back to normal: */
+
+c1.^.^.print = undef;
+c1.^.^.^ = globals;
+
+/* Now, we've deleted the print in this new parent table we've created, and
+   made a link to the global table that c1 can follow to the global
+   print function. c1 now works without trouble: */
+
+c1(1);
+c1(1);
+c1(1);
+
+print("\n\n");
+
+/* Poe's approach to lexical scoping is certainly an unconvential one, and
+   it may not seem useful. One application which may seem very appealing to
+   those who program in the object-oriented style would be connecting methods
+   to the tables they lie in through a scoping hack. Let's define a 
+   pseudo "class" called Person, whose instances can be created with
+   Person.new : */
+
+Person = {};
+Person.new = func(name,age):
+   return( { Name = name, Age = age,
+             getAge = func(): return(Age); end,
+             getName = func(): return(Name); end,
+             setAge = func(i): extern Age = i; end,
+             setName = func(s): extern Name = s; end } );
+end;
+
+/* This model coincides with the OOP concept of "privacy", which encourages
+   accessing and assigning variables through functions associated with the
+   object rather than directly. Unfortunately, Poe's lexical scoping rules
+   mean that this code will not function as anticipated; if we do the 
+   following, */
+
+jack = Person.new("jack",34);
+print(jack.getAge());
+
+/* Notice that Jack's age won't actually be printed. We can change that
+   with an extremely minor change to the "class" definition, however: */
+
+Person.new = func(name,age):
+   ret = { Name = name, Age = age,
+             getAge = func(): return(Age); end,
+             getName = func(): return(Name); end,
+             setAge = func(i): extern Age = i; end,
+             setName = func(s): extern Name = s; end };
+   locals.^ = ret;
+   return(ret);
+end;
+
+/* Notice that all we are doing now is changing the parent table of the local
+   table to refer to ret. Now, if getAge, setAge, getName, or setName need
+   to access or assign to Age or Name, they will look into the new Person
+   table. */
+
+jack = Person.new("jack",34);
+jack.setAge(35);
+print(jack.getAge());
+
+/* Now, another minor change: */
+
+Person.new = func(name,age):
+   ret = { Name = name, Age = age,
+             getAge = func(): return(Age); end,
+             getName = func(): return(Name); end,
+             setAge = func(i): extern Age = i; end,
+             setName = func(s): extern Name = s; end,
+             printInfo = func(): 
+                         print("I am",Name,"and I am",Age,"years old"); end };
+   ret.^ = globals;
+   locals.^ = ret;
+   return(ret);
+end;
+
+/* We've added a "printInfo" field and changed ret's parent table to the 
+   global table. Now, a call to printInfo will find the "print" global function
+   when it looks for it: */
+
+jack = Person.new("jack",34);
+jack.setAge(35);
+jack.printInfo();
+
+/* I'll end with a short note: Poe gives great freedom to the programmer with
+   regard to scoping, but this comes with responsibility as well. The
+   interpreter will not know if you set up a loop in your scoping references,
+   and if you start searching for a symbol that doesn't exist in a loop
+   of parent tables, then the end result will probably be a segmentation 
+   fault. In particular, notice that the assignments 
+      ret.^ = globals;
+      locals.^ = ret;
+   could not have been done in reverse order without invoking an infinite
+   loop; this would have set the parent table of ret to ret itself. In
+   general, it is always safest to do your assignments "from the top down",
+   as we've demonstrated here with ret, globals, and locals. The
+   interpreter will not interfere if you attempt to change the scoping rules
+   of your Poe programs manually, but this may come at a price if you make
+   an error. */

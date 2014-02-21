@@ -1,0 +1,90 @@
+VERSION INFO:
+Poe v. 1.0.2 has been released. There have been numerous bug fixes, 
+particularly to the garbage collector, and I have included a documentation 
+file 1000lines.txt which will serve, for now, as non-comprehensive documentation of the language.
+
+---
+
+The Poe programming language is now in the Alpha release stage. As testing
+continues, more minor bugs are bound to be caught; I encourage you to
+contact me if you do find any. Included in this directory are example
+scripts that have demonstrated to work very reliably.
+
+To quickly get started with Poe, see the included QUICKSTART document.
+
+The process of building the language should be self-evident: an extremely
+simple Makefile is included, which you may edit to serve your needs. 
+The executable that will be built is called "pint", for "Poe interpreter"; 
+to execute a script, do
+
+pint scriptname.poe
+
+Explicit per-script instructions are given in each script. The scripts
+serve to demonstrate a number of the language's features, including
+I/O and command line interaction, metatables, and a unique approach
+to lexical scoping. More comprehensive documentation of the language and
+its operators/features is forthcoming.
+
+As a side note, be aware that executing a script leaves a "remnant" bytecode
+file with a .pbc extension; for example, executing scope.poe will leave a
+scope.pbc file after execution. These bytecode files can be safely deleted.
+
+SOURCE CODE
+pdata.h
+pdata.c -- Basic functions for keying Poe structures
+puniverse.h
+puniverse.c -- Basic functions for creating Poe universes
+pmem.h
+pmem.c -- Basic functions for memory allocation
+pbc.h
+pbc.c -- Bytecode compilation
+pgc.h
+pgc.c -- Garbage collector
+pexec.h
+pexec.c -- Functions for bytecode execution
+pdo1.h
+pdo1.c -- Instruction execution, pt. 1
+pdo2.h 
+pdo2.c -- Instruction execution, pt. 2
+y.tab.h 
+y.tab.c -- Bison-generated parser
+lex.yy.h
+lex.yy.c -- Flex-generated lexer
+pio.h
+pio.c -- I/O library
+pstd.h
+pstd.c -- standard library
+pmath.h
+pmath.c -- math library
+pstring.h
+pstring.c -- string library
+pmain.c 
+Makefile
+
+EXAMPLE SCRIPTS
+std.poe -- A script containing definitions for standard library functions.
+A pre-compiled copy of the bytecode is built into the interpreter and is
+executed during every invocation of it; this does not need to be manually
+executed.
+sum.poe -- A simple tool to sum the numbers given on the command line (and
+in a single line of code, no less).
+echo.poe -- A simple implementation of the echo command line tool.
+file.poe -- A tool to open a file and print its contents, with all letters
+capitalized.
+smart.poe -- A small library containing a definition for "smart arrays",
+which are arrays that throw errors when an attempt is made to access
+an element outside of the array's "size". Tests for this script are 
+included in the require.poe file.
+require.poe -- A small script demonstrating file inclusion; it loads and
+executes some of the functions in the smart.poe file.
+scope.poe -- A long script demonstrating some of the unique lexical scoping
+features which Poe provides.
+blocks.poe -- A discussion of Poe's blocks and some of the unique situations they present.
+
+DOCUMENTATION
+1000lines.txt -- An introduction to the Poe programming language, for
+the seasoned programmer, in less than 1000 lines.
+standard_library.txt -- A list of the currently implemented and to-be-
+implemented standard library functions.
+TODO -- An ongoing list of tasks which need to be completed.
+QUICKSTART -- A list of instructions to quickly execute some Poe scripts

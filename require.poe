@@ -1,0 +1,24 @@
+/* require.poe: demonstration of including files */
+
+/* The smart array package is contained in the smart.poe source file. 
+   Smart arrays are implemented in such a way that they can be accessed
+   and assigned just as regular arrays can, but an error is raised 
+   whenever an attempt is made to overstep the "size" of the array. */
+
+require("smart.poe");
+
+arr = smart.new(100); 
+
+print(arr);
+
+arr[0] = "hello";
+print(arr[0]);
+
+arr[29] = { my_name = "Ricky" };
+print(arr[29],arr[29].my_name);
+
+arr[99] = "goodbye";
+print(arr[99]);
+
+arr[100] = "this should bring up an error";
+print("I will never see the light of day");  /* control never reaches here */ 

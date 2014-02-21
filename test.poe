@@ -1,0 +1,5 @@
+sum_and_diff = func(x,y):
+    return(x+y,x-y);
+end;
+sum, diff, x = sum_and_diff(1,10);
+print(sum,diff,x);

@@ -1,0 +1,6 @@
+/* sum.poe: sums all the given integers at the command line */
+
+/* usage: pint sum.poe ... 
+   e.g. pint sum.poe 1 2 3 -> 6 */
+
+print(fold(func(a,b): return(a+b); end, 0, map!(toint, argv)));

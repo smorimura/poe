@@ -1,0 +1,51 @@
+/* smart.poe: a package for  smart arrays, which bring up an error
+   whenever an attempt is made to access an element outside of the array's
+   predetermined "size" */
+
+smart = {}; /* The smart table, where all the functions will be kept */
+
+smart.meta = { /* The common metatable for all smart arrays */
+    arracc = func(arr, key):
+        if key>=arr.^.size:
+             print("Smart array error: attempted to access key",key);
+             print("which is greater than or equal to size",arr.^.size);
+             exit();
+         end;
+         return(arr.^.arr[key]);
+    end,
+    arrset = func(arr,key,val):
+        if key>=arr.^.size:
+             print("Smart array error: attempted to access key",key);
+             print("which is greater than or equal to size",arr.^.size);
+             exit();
+        end;
+        arr.^.arr[key] = val;
+     end,
+    tostr = "smartarray",
+    type  = "smartarray"
+}; 
+
+smart.new = func(size): /* A function for creating new smart arrays */
+    new = "";  /* We will model smart arrays as strings, since strings
+                  require low overhead. In reality, the string will remain
+                  empty. */
+    new.^ = { size = size, arr = [] }; /* We keep the smart array's size and
+                                          data in the string's supertable */
+    new.* = smart.meta;
+    return(new);
+end;
+
+/* We can create a new smart array by calling smart.new(N) for some integer
+   N, which represents the array's size in a virtual sense. That is, the 
+   size doesn't make a difference to the interpreter, but whenever we attempt
+   to make an assignment to or read from the smart array, the smart array's
+   metamethods will be invoked, and it will ensure that the read is not
+   illegal. This implementation is not really useful for memory safety,
+   since Poe data structures always grow and shrink to fit memory usage
+   needs, but it can be useful to prevent some bugs. For instance, if you
+   know you are only going to ever need to use 32 elements of an array,
+   implementing the array as a smart array will raise an error if you 
+   accidentally overstep that range.
+
+   For a demonstration of the Smart Array functionality, see the require.poe
+   script. */
